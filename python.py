@@ -1,93 +1,80 @@
-import csv
-import statistics
-def calculate_average(marks):
-    return sum(marks.values()) / len(marks)
-def calculate_median(marks):
-    return statistics.median(marks.values())
-def find_max_score(marks):
-    return max(marks.values())
-def find_min_score(marks):
-    return min(marks.values())
-def assign_grades(marks):
-    grades = {}
-    for name, mark in marks.items():
-        if mark >= 90:
-            grades[name] = 'A'
-        elif mark >= 80:
-            grades[name] = 'B'
-        elif mark >= 70:
-            grades[name] = 'C'
-        elif mark >= 60:
-            grades[name] = 'D'
-        else:
-            grades[name] = 'F'
-    return grades
+import random
+import os
 
-def grade_distribution(grades):
-    dist = {'A':0, 'B':0, 'C':0, 'D':0, 'F':0}
-    for g in grades.values():
-        dist[g] += 1
-    return dist
+# Load high scores from file
+def load_high_scores():
+    if not os.path.exists("highscores.txt"):
+        return {"Easy": None, "Medium": None, "Hard": None}
 
-def pass_fail(marks):
-    passed = [name for name, mark in marks.items() if mark >= 40]
-    failed = [name for name, mark in marks.items() if mark < 40]
-    return passed, failed
+    with open("highscores.txt", "r") as file:
+        lines = file.readlines()
 
-def print_table(marks, grades):
-    print("\nName\t\tMarks\tGrade")
-    print("----------------------------------")
-    for name in marks:
-        print(f"{name}\t\t{marks[name]}\t{grades[name]}")
+    scores = {}
+    for line in lines:
+        level, score = line.strip().split(":")
+        scores[level] = int(score) if score != "None" else None
+    return scores
 
-def manual_input():
-    marks = {}
-    n = int(input("Enter number of students: "))
-    for _ in range(n):
-        name = input("Enter student name: ")
-        mark = float(input(f"Enter marks for {name}: "))
-        marks[name] = mark
-    return marks
+# Save high scores to file
+def save_high_scores(scores):
+    with open("highscores.txt", "w") as file:
+        for level, score in scores.items():
+            file.write(f"{level}:{score}\n")
 
-def csv_input():
-    marks = {}
-    file = input("Enter CSV file path (e.g. students.csv): ")
-    with open(file, 'r') as f:
-        reader = csv.reader(f)
-        next(reader)  # skip header
-        for row in reader:
-            name, mark = row
-            marks[name] = float(mark)
-    return marks
+# Difficulty mapping
+difficulty_map = {
+    "1": ("Easy", 50),
+    "2": ("Medium", 100),
+    "3": ("Hard", 200)
+}
 
-# ---------- Main CLI ----------
-print("🎓 Welcome to GradeBook Analyzer 🎓")
+# Main game loop
 while True:
-    print("\n1. Manual Input\n2. CSV Input\n3. Exit")
-    choice = input("Choose option: ")
+    print("🎯 Guess the Number Game!")
+    print("Choose a difficulty level:")
+    print("1. Easy (1-50)")
+    print("2. Medium (1-100)")
+    print("3. Hard (1-200)")
 
-    if choice == '1':
-        marks = manual_input()
-    elif choice == '2':
-        marks = csv_input()
-    elif choice == '3':
-        print("Exiting... Goodbye ")
-        break
+    choice = input("Enter 1, 2, or 3: ")
+
+    if choice in difficulty_map:
+        difficulty, max_range = difficulty_map[choice]
     else:
-        print("Invalid choice, try again.")
-        continue
+        print("Invalid choice! Defaulting to Medium.")
+        difficulty, max_range = "Medium", 100
 
-    # Analysis
-    avg = calculate_average(marks)
-    med = calculate_median(marks)
-    maxm = find_max_score(marks)
-    minm = find_min_score(marks)
-    grades = assign_grades(marks)
-    dist = grade_distribution(grades)
-    passed, failed = pass_fail(marks)
+    high_scores = load_high_scores()
 
-    print_table(marks, grades)
-    print(f"\n Average: {avg:.2f}, Median: {med}, Max: {maxm}, Min: {minm}")
-    print(f" Grade Distribution: {dist}")
-    print(f" Passed ({len(passed)}): {passed}")
-    print(f"Failed ({len(failed)}): {failed}")
+    print(f"\n🏆 Best Attempts for {difficulty}: {high_scores[difficulty] if high_scores[difficulty] else 'No record yet'}")
+
+    secret_number = random.randint(1, max_range)
+    attempts = 0
+    guess = None
+
+    print(f"\nI'm thinking of a number between 1 and {max_range}.")
+
+    # Game loop
+    while guess != secret_number:
+        guess = int(input("Enter your guess: "))
+        attempts += 1
+
+        if guess > secret_number:
+            print("Too high! Try again.\n")
+        elif guess < secret_number:
+            print("Too low! Try again.\n")
+        else:
+            print(f"🎉 Correct! The number was {secret_number}.")
+            print(f"You guessed it in {attempts} attempts.")
+
+    # Update high score if it's a new record
+    if high_scores[difficulty] is None or attempts < high_scores[difficulty]:
+        print("🏅 NEW HIGH SCORE! Congratulations!")
+        high_scores[difficulty] = attempts
+        save_high_scores(high_scores)
+
+    # Restart option
+    restart = input("\nDo you want to play again? (Y/N): ").strip().lower()
+    if restart != "y":
+        print("Thanks for playing! Goodbye 👋")
+        break
